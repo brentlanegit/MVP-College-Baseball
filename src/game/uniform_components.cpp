@@ -130,13 +130,14 @@ bool MoveRow(X86Context& ctx, int direction) {
 }
 bool UniformOwnsDirection(X86Context& ctx) {
     // CNTRLSELECT receives the same press independently of TeamSelect. Its handler must not reassign this port
-    // while that port edits a uniform. The control's +208 owner is set by 0xAF7B0; the screen's +4C bit is set on
-    // activation (0xAF950) and cleared on exit (0xB2A90), so cached/inactive screens cannot block other menus.
+    // while that port edits a uniform. The control's +208 owner is set by 0xAF7B0. Match the native input
+    // traversal (0xAFBB0): +28 bits 0 and 1 must both be set. The +4C lifecycle bit is unrelated to input focus
+    // and is clear during normal TeamSelect input. Hidden/disabled cached screens cannot block other menus.
     const uint32_t selector = ctx.ecx, port = R32(ctx.esp + 4);
     for (const auto& [self, control] : g_controls) {
         if (!control->selection) continue;
         const uint32_t screen = R32(self + 0x208);
-        if (!screen || !(*static_cast<uint8_t*>(kernel::HostPtr(screen + 0x4C)) & 1) ||
+        if (!screen || (*static_cast<uint8_t*>(kernel::HostPtr(screen + 0x28)) & 3) != 3 ||
             R32(screen + 0x200) != selector) continue;
         if (FocusedUniform(ctx, screen, port) == self) return true;
     }

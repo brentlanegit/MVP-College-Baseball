@@ -153,7 +153,8 @@ int main() {
     W32(0x10204, kDesc[0] - 0xAC); W32(0x10208, kDesc[1] - 0xAC);
     for (unsigned offset : {0x68u, 0x7Cu, 0x3Cu, 0x160u, 0x150u}) W32(0x8000 + offset, 0x1000 + offset);
     W32(0x50000, 0x8000);
-    W32(0x50200, 0x52000); memory[0x5004C] = 1;
+    W32(0x50200, 0x52000); W32(0x50028, 0xB003);
+    W32(0x5004C, 0xBB55BB54); // native TeamSelect input runs with this unrelated lifecycle bit clear
     for (unsigned side = 0; side < 2; ++side) for (unsigned i = 0; i < 6; ++i) W32(0x30000 + side * 0x1000 + i * 0x100, 0x8000);
     Init(0); Init(1);
     CHECK(displayed[0x30100].find("Home") != std::string::npos && displayed[0x31100].find("Away") != std::string::npos);
@@ -213,10 +214,16 @@ int main() {
     Run(sub_000D3310, 0x52000, {0}); CHECK(assignment_calls == 1); // team/difficulty picker
     focus = kControl[0]; Run(sub_000D3560, 0x52000, {1}); CHECK(assignment_calls == 2); // other port
     focus = kControl[0]; Run(sub_000D3310, 0x53000, {0}); CHECK(assignment_calls == 3); // other widget
-    focus = kControl[0]; memory[0x5004C] = 0; Run(sub_000D3560, 0x52000, {0});
-    CHECK(assignment_calls == 4); // cached inactive screen
-    focus = kControl[0]; memory[0x5004C] = 1; port_enabled = false; Run(sub_000D3310, 0x52000, {0});
-    CHECK(assignment_calls == 5); port_enabled = true;
+    for (uint8_t flags : {0u, 1u, 2u}) {
+        focus = kControl[0]; memory[0x50028] = flags;
+        const auto before = assignment_calls;
+        Run(sub_000D3560, 0x52000, {0});
+        CHECK(assignment_calls == before + 1); // hidden or input-disabled cached screen
+    }
+    focus = kControl[0]; memory[0x50028] = 3; memory[0x5004C] = 1;
+    Run(sub_000D3310, 0x52000, {0}); CHECK(assignment_calls == 6 && focus == kControl[0]);
+    port_enabled = false; Run(sub_000D3310, 0x52000, {0});
+    CHECK(assignment_calls == 7); port_enabled = true;
     Run(sub_00515C60, kControl[0]); Run(sub_00515C60, kControl[1]);
     CHECK(live_buffers.empty());
     std::cout << "production uniform hooks: ABI, selection, side isolation, fallback and cleanup passed\n";

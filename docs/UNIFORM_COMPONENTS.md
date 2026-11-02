@@ -132,7 +132,8 @@ cleanup, paired press/release navigation, descriptor preservation, resource shar
 component-only export, source preservation, lettering, missing images, output refusal and cross-team/part paths.
 
 The input fixture also exercises the independent TeamSelect/CNTRLSELECT handlers in both dispatch orders, with
-other ports, unrelated widgets, inactive screens and locked controls.
+other ports, unrelated widgets, hidden/disabled screens and locked controls. The assignment guard follows the
+native input traversal's visibility/enabled bits at screen `+0x28`; the lifecycle bit at `+0x4C` is unrelated.
 
 Windows validation on October 29, 2026 passed the release build and native checks of the four-row layout, preset
 reset, independently authored pieces, same-team side isolation, selected hat-pack helmets, jersey lettering,
@@ -140,7 +141,12 @@ pants during batting/fielding (including distant players), and a new matchup ret
 run exited normally with code 0. Input used the keyboard's native pad mapping; physical controllers and a complete
 Workshop installation workflow were not tested.
 
-That run exposed a second, independently dispatched controller-assignment handler receiving Up/Down. Its scoped
-fix passes the local suites, sanitizer checks and incremental Windows build. **The final native navigation,
-back/team-change retest remains pending** because the coordinated Windows test window was withdrawn. Keep the PR
-draft until that focused check passes. No full-game or dynasty-season simulation is needed for this input change.
+The final Windows build and focused native navigation check passed on November 2, 2026. Up/down selects one row
+per press and wraps in both directions without reassigning the controller, on both home and away. Controller
+assignment still works outside the uniform step. Presets reset all components; back/return preserves the current
+combination; changing teams and starting a new matchup restore the appropriate home/away defaults. Same-team
+sides retain independent choices. This run exited normally with code 0 and all 268 original input hashes
+unchanged. The local suites, strict syntax and ASan/UBSan checks also pass with the final input guard.
+
+November 2 was a focused input check; the component rendering/gameplay evidence is from October 29. No full-game
+or dynasty-season simulation was performed for this input-only correction.
